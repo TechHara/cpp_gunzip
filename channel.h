@@ -65,9 +65,7 @@ class Channel : public Iterator<T> {
     return false;
   }
 
-  ~Channel() {
-    if (state) close();
-  }
+  ~Channel() { close(); }
 
  private:
   struct State {
