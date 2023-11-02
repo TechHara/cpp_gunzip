@@ -12,12 +12,15 @@ Below shows runtime comparison with other C/C++ gunzip implementations.
 ## Decompression of linux.tar.gz (macOS arm64)
 |  # Threads | GNU Gzip  | Pigz | This  |
 |:-:|:-:|:-:|:-:|
-| 1 | 7.19 | 2.64 | 4.44 |
+| 1 | 7.19 | 2.64 | 3.77 |
 | 2 | - | 2.78 | 3.22 |
 
 # Build
 ```sh
-$ cmake -Bbuild -DCMAKE_CXX_FLAGS="-O3 -g -DNDBUG"
+# Linux
+$ cmake -Bbuild -DCMAKE_CXX_FLAGS="-O3 -g -DNDEBUG"
+# macOS
+$ cmake -Bbuild -DCMAKE_CXX_FLAGS="-O3 -g -DNDEBUG -Wl,-ld_classic -D__BYTE_ORDER=1234" -DCMAKE_CXX_COMPILER=g++-13
 $ make -Cbuild -j
 ```
 

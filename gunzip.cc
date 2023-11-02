@@ -13,7 +13,7 @@ int usage(std::string const& program) {
   return -1;
 }
 
-constexpr std::streamsize BUFFER_SIZE = 4 << 10;
+constexpr std::streamsize BUFFER_SIZE = 64 << 10;
 
 int main(int argc, const char** argv) {
   std::ios_base::sync_with_stdio(false);
