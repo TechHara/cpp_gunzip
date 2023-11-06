@@ -8,6 +8,9 @@ constexpr uint32_t NUM_BITS_FIRST_LOOKUP = 9;
 
 class HuffmanDecoder {
  public:
+  // uninitialized
+  HuffmanDecoder() : primary_mask_{0}, secondary_mask_{0} {}
+
   explicit HuffmanDecoder(Codebook const& codebook) {
     auto max_nbits = codebook.max_length();
     uint32_t nbits;

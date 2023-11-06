@@ -13,6 +13,8 @@
 enum struct State {
   Header,
   Block,
+  Inflate,
+  InflateFinalBlock,
   Footer,
 };
 
@@ -38,20 +40,29 @@ class Producer : public Iterator<Produce> {
         return read_header(reader_);
       case State::Block: {
         auto header = reader_.read_bits(3);
-        if (header & 1) {
-          state_ = State::Footer;
-        }
+        auto is_final = (header & 1) == 1;
+
         switch (header & 0b110) {
           case 0b000:
+            if (is_final) state_ = State::Footer;
             return inflate_block0();
           case 0b010:
-            return inflate_block1();
+            ll_decoder_ = std::move(HuffmanDecoder{Codebook::default_ll()});
+            dist_decoder_ = std::move(HuffmanDecoder{Codebook::default_dist()});
+            state_ = is_final ? State::InflateFinalBlock : State::Inflate;
+            return inflate(is_final);
           case 0b100:
-            return inflate_block2();
+            std::tie(ll_decoder_, dist_decoder_) = read_dynamic_codebook();
+            state_ = is_final ? State::InflateFinalBlock : State::Inflate;
+            return inflate(is_final);
           default:
             throw Error{ErrorType::InvalidBlockType};
         }
       }
+      case State::Inflate:
+        return inflate(false);
+      case State::InflateFinalBlock:
+        return inflate(true);
       case State::Footer:
         state_ = State::Header;
         return read_footer(reader_);
@@ -65,6 +76,8 @@ class Producer : public Iterator<Produce> {
   State state_;
   std::size_t member_idx_;
   SlidingWindow window_;
+  HuffmanDecoder ll_decoder_;
+  HuffmanDecoder dist_decoder_;
 
   Produce inflate_block0() {
     reader_.byte_align();
@@ -82,32 +95,18 @@ class Producer : public Iterator<Produce> {
     return buf;
   }
 
-  Produce inflate_block1() {
-    HuffmanDecoder ll_decoder{Codebook::default_ll()};
-    HuffmanDecoder dist_decoder{Codebook::default_dist()};
-    return inflate(std::move(ll_decoder), std::move(dist_decoder));
-  }
-
-  Produce inflate_block2() {
-    auto decoders = read_dynamic_codebook();
-    return inflate(std::move(decoders.first), std::move(decoders.second));
-  }
-
-  Produce inflate(HuffmanDecoder ll_decoder, HuffmanDecoder dist_decoder) {
-    CodeIterator iter{reader_, ll_decoder, dist_decoder};
-    auto done = false;
-    std::vector<uint8_t> buf;
-    for (;;) {
-      auto boundary = window_.boundary();
-      auto result = decode(window_.buffer(), boundary, iter);
-      auto n = result.n;
-      done = result.done;
-
-      auto begin = window_.data.begin() + window_.cur;
-      buf.insert(buf.end(), begin, begin + n);
-      window_.slide(n);
-      if (done) break;
+  Produce inflate(bool is_final) {
+    auto boundary = window_.boundary();
+    auto result =
+        decode(window_.buffer(), boundary, reader_, ll_decoder_, dist_decoder_);
+    auto n = result.n;
+    if (result.done) {
+      state_ = is_final ? State::Footer : State::Block;
     }
+    auto begin = window_.data.begin() + window_.cur;
+    std::vector<uint8_t> buf(begin, begin + n);
+    window_.slide(n);
+
     return buf;
   }
 

@@ -51,62 +51,51 @@ struct DecodeResult {
   static DecodeResult WindowIsFull(std::size_t n) { return {n, false}; }
 };
 
-template <typename Reader>
-class CodeIterator {
- public:
-  explicit CodeIterator(BitReader<Reader> &reader, HuffmanDecoder ll_decoder,
-                        HuffmanDecoder dist_decoder)
-      : reader_{reader},
-        ll_decoder_{std::move(ll_decoder)},
-        dist_decoder_{std::move(dist_decoder)} {}
-
-  std::optional<Code> next() {
-    auto bitcode = reader_.peek_bits();
-    uint32_t symbol, len;
-    std::tie(symbol, len) = ll_decoder_.decode(bitcode);
-    reader_.consume(len);
-    if (symbol < END_OF_BLOCK) {
-      return Literal{symbol};
-    } else if (symbol == END_OF_BLOCK) {
-      return EndOfBlock{};
-    } else {
-      uint32_t bits, length;
-      std::tie(bits, length) = SYMBOL2BITS_LENGTH[symbol & 0xFF];
-      length += reader_.read_bits(bits);
-      bitcode = reader_.peek_bits();
-      std::tie(symbol, len) = dist_decoder_.decode(bitcode);
-      reader_.consume(len);
-      uint32_t distance;
-      std::tie(bits, distance) = SYMBOL2BITS_DISTANCE[symbol];
-      distance += reader_.read_bits(bits);
-      return Dictionary{distance, length};
-    }
+template <typename BitRead>
+inline Code read_next_code(BitRead& reader, HuffmanDecoder const& ll_decoder,
+                           HuffmanDecoder const& dist_decoder) {
+  auto bitcode = reader.peek_bits();
+  uint32_t symbol, len;
+  std::tie(symbol, len) = ll_decoder.decode(bitcode);
+  reader.consume(len);
+  if (symbol < END_OF_BLOCK) {
+    return Literal{symbol};
+  } else if (symbol == END_OF_BLOCK) {
+    return EndOfBlock{};
+  } else {
+    uint32_t bits, length;
+    std::tie(bits, length) = SYMBOL2BITS_LENGTH[symbol & 0xFF];
+    length += reader.read_bits(bits);
+    bitcode = reader.peek_bits();
+    std::tie(symbol, len) = dist_decoder.decode(bitcode);
+    reader.consume(len);
+    uint32_t distance;
+    std::tie(bits, distance) = SYMBOL2BITS_DISTANCE[symbol];
+    distance += reader.read_bits(bits);
+    return Dictionary{distance, length};
   }
+}
 
- private:
-  BitReader<Reader> &reader_;
-  HuffmanDecoder ll_decoder_, dist_decoder_;
-};
-
-template <typename Iter>
-DecodeResult decode(Slice<uint8_t> window, std::size_t boundary, Iter &iter) {
+template <typename BitRead>
+DecodeResult decode(Slice<uint8_t> window, std::size_t boundary,
+                    BitRead& reader, HuffmanDecoder const& ll_decoer,
+                    HuffmanDecoder const& dist_decoder) {
   auto idx = boundary;
   if (idx + MAX_LENGTH >= window.size()) {
     return DecodeResult::WindowIsFull(idx - boundary);
   }
 
   for (;;) {
-    std::optional<Code> iter_result = iter.next();
-    if (!iter_result) break;
-    switch (iter_result->index()) {
+    auto code = read_next_code(reader, ll_decoer, dist_decoder);
+    switch (code.index()) {
       case 0:  // Literal
-        window[idx] = std::get<0>(*iter_result).x;
+        window[idx] = std::get<0>(code).x;
         ++idx;
         break;
       case 1:  // EndOfBlock
         return DecodeResult::Done(idx - boundary);
       case 2:  // Dictionary
-        Dictionary dictionary = std::get<2>(*iter_result);
+        Dictionary dictionary = std::get<2>(code);
         if (dictionary.distance > idx) throw Error{ErrorType::DistanceTooMuch};
         auto begin = idx - dictionary.distance;
         while (dictionary.length > 0) {
