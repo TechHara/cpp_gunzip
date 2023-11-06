@@ -5,7 +5,7 @@
 #include "slice.h"
 
 constexpr uint16_t MAX_DISTANCE = 1 << 15;
-constexpr std::size_t WINDOW_SIZE = static_cast<std::size_t>(MAX_DISTANCE) << 3;
+constexpr std::size_t WINDOW_SIZE = static_cast<std::size_t>(MAX_DISTANCE) * 3;
 
 struct SlidingWindow {
   std::vector<uint8_t> data;

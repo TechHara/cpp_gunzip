@@ -6,14 +6,14 @@ Below shows runtime comparison with other C/C++ gunzip implementations.
 ## Decompression of linux.tar.gz (Linux x64)
 |  # Threads | GNU Gzip | Pigz | This |
 |:-:|:-:|:-:|:-:|
-| 1 | 4.93 | 3.26 | 2.48 |
+| 1 | 4.93 | 3.26 | 2.81 |
 | 2 | - | 2.35 | 1.87 |
 
 ## Decompression of linux.tar.gz (macOS arm64)
 |  # Threads | GNU Gzip  | Pigz | This  |
 |:-:|:-:|:-:|:-:|
-| 1 | 7.19 | 2.64 | 3.40 |
-| 2 | - | 2.78 | 2.86 |
+| 1 | 7.19 | 2.64 | 3.44 |
+| 2 | - | 2.78 | 2.89 |
 
 # Build
 ```sh
