@@ -47,8 +47,8 @@ class Producer : public Iterator<Produce> {
             if (is_final) state_ = State::Footer;
             return inflate_block0();
           case 0b010:
-            ll_decoder_ = std::move(HuffmanDecoder{Codebook::default_ll()});
-            dist_decoder_ = std::move(HuffmanDecoder{Codebook::default_dist()});
+            ll_decoder_ = HuffmanDecoder{Codebook::default_ll()};
+            dist_decoder_ = HuffmanDecoder{Codebook::default_dist()};
             state_ = is_final ? State::InflateFinalBlock : State::Inflate;
             return inflate(is_final);
           case 0b100:
