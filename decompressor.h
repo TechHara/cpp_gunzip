@@ -3,10 +3,14 @@
 #include <memory>
 #include <thread>
 
-#include "Crc32.h"
 #include "channel.h"
 #include "iterator.h"
 #include "producer.h"
+#ifdef USE_FAST_CRC32
+#include "Crc32.h"
+#else
+#include "zlib.h"
+#endif
 
 template <typename Read>
 class Decompressor {
@@ -76,7 +80,11 @@ class Decompressor {
         case 2: {  // Data
           auto &xs = std::get<2>(*iter_result);
           if (xs.empty()) continue;
+#ifdef USE_FAST_CRC32
           crc32_ = crc32_fast(&xs[0], xs.size(), crc32_);
+#else
+          crc32_ = crc32(crc32_, &xs[0], xs.size());
+#endif
           size_ += xs.size();
           buf_ = std::move(xs);
           begin_ = 0;

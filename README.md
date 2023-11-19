@@ -1,4 +1,4 @@
-This repo contains a C++ port of [gunzip](https://github.com/TechHara/gunzip) for decompression of `.gz` files. CRC32 checksum is perfomed using [Fast CRC32](https://create.stephan-brumme.com/crc32/) library.
+This repo contains a C++ port of [gunzip](https://github.com/TechHara/gunzip) for decompression of `.gz` files. By default, it relies on [Fast CRC32](https://create.stephan-brumme.com/crc32/) for CRC32 computation but can be switched to use [zlib](https://www.zlib.net) instead.
 
 # Benchmark
 Below shows runtime comparison with other C/C++ gunzip implementations.
