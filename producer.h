@@ -65,6 +65,7 @@ class Producer : public Iterator<Produce> {
         return inflate(true);
       case State::Footer:
         state_ = State::Header;
+        window_ = SlidingWindow{}; // reset history
         return read_footer(reader_);
       default:
         return std::nullopt;  // unreachable
