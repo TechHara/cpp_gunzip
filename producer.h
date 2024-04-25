@@ -90,9 +90,10 @@ class Producer : public Iterator<Produce> {
     std::vector<uint8_t> buf(len, 0);
     auto gcount = reader_.read(Slice{buf});
     if (gcount != len) throw Error{ErrorType::UnexpectedEof};
+    auto n = std::min<std::size_t>(len, MAX_DISTANCE);
     auto write_buffer = window_.write_buffer();
-    std::copy(&buf[0], &buf[len], write_buffer.begin());
-    window_.slide(len);
+    std::copy(&buf[len - n], &buf[len], write_buffer.begin());
+    window_.slide(n);
     return buf;
   }
 
